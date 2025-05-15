@@ -88,6 +88,7 @@ Modifica el archivo `lib/main.dart` así:
 ```dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -105,17 +106,51 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Inventario Ferretería',
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Inventario'),
-        ),
-        body: const Center(
-          child: Text('¡Firebase conectado correctamente!'),
-        ),
+      home: const InventarioScreen(),
+    );
+  }
+}
+
+class InventarioScreen extends StatelessWidget {
+  const InventarioScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Inventario')),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('piezas').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text('Error al cargar los datos'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          final docs = snapshot.data!.docs;
+
+          if (docs.isEmpty) {
+            return const Center(child: Text('No hay piezas registradas'));
+          }
+
+          return ListView.builder(
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final pieza = docs[index].data() as Map<String, dynamic>;
+              return ListTile(
+                title: Text(pieza['nombre']),
+                subtitle: Text('Precio: \$${pieza['precio']} | Stock: ${pieza['stock']}'),
+              );
+            },
+          );
+        },
       ),
     );
   }
 }
+
+
 ```
 
 ---
